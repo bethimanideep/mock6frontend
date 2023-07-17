@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        header {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        #quiz-from {
+            display: block;
+            width: auto;
+            margin: auto;
+            margin-top: 20px;
+        }
+
+        #create-quiz {
+            display: none;
+            flex-direction: column;
+            width: 30%;
+            gap: 10px;
+            margin: auto;
+            margin-top: 20px;
+        }
+
+        .qfc {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 13px;
+            gap: 2px;
+            border: 1px solid;
+            padding: 10px;
+        }
+
+        #quiz-container {
+            display: flex;
+            width: 95%;
+            margin: auto;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .quiz-card {
+            width: 25%;
+        }
+
+        #updation-form {
+            display: none;
+            flex-direction: column;
+            width: 20%;
+            gap: 5px;
+            margin: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>Quizes Dashboard</header>
+    <button id="quiz-from" onclick="showForm()">Create Quiz</button>
+    <form id="create-quiz">
+        <input type="email" id="email" required readonly="readonly">
+        <input type="text" id="title" placeholder="Title" required>
+        <textarea id="description" cols="10" rows="5" required></textarea>
+        <input type="number" id="no-of-questions" placeholder="No of Questions" required>
+        <input type="button" id="show-questions" value="Show Questions">
+        <div id="append-questions"></div>
+        <input type="submit" id="submit" value="Create Quiz">
+    </form>
+    <div id="quiz-container"></div>
+    <div id="updation-form">
+        <input type="text" id="title-updation">
+        <textarea id="description-updation" cols="10" rows="5"></textarea>
+        <input type="button" value="update" id="update-dtls-btn">
+    </div>
+</body>
+<script>
+    const baseURL = "http://localhost:1000"
+
+    const userEmail = localStorage.getItem("email") || null;
+    let quizForm = document.getElementById("create-quiz")
+    let noOfQuestions = document.getElementById("no-of-questions")
+    let showQuestions = document.getElementById("show-questions")
+    let questionCont = document.getElementById("append-questions")
+    let submitBtn = document.getElementById("submit")
+    let quizesCont = document.getElementById("quiz-container")
+    let updatedTitle = document.getElementById("title-updation")
+    let updatedDescription = document.getElementById("description-updation")
+    let updatedForm = document.getElementById("updation-form")
+    let updateBtn = document.getElementById("update-dtls-btn")
+
+
+
+    window.addEventListener("load", () => {
+        document.getElementById("email").value = userEmail
+        displayQuizes()
+    })
+
+    function displayQuizes() {
+        fetch(`${baseURL}/getquizes`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.message) {
+                    displayOnDOM(data)
+                }
+                else {
+                    alert(data.message)
+                }
+            })
+    }
+
+    function displayOnDOM(data) {
+        quizesCont.innerHTML = null;
+        data.forEach(ele => {
+            let card = document.createElement("div");
+            card.setAttribute("class", "quiz-card");
+
+            let title = document.createElement("h2");
+            title.setAttribute("class", "quiz-title");
+            title.innerText = ele.title;
+
+            let description = document.createElement("p");
+            description.setAttribute("class", "quiz-description");
+            description.innerText = ele.description;
+
+            let createdBy = document.createElement("p");
+            createdBy.setAttribute("class", "quiz-createdBy");
+            createdBy.innerText = "Created by : " + ele.creator;
+
+            let noOfQuestions = document.createElement("p");
+            noOfQuestions.setAttribute("class", "quiz-total-questions");
+            noOfQuestions.innerText = "Questions : " + ele.questions.length;
+
+            if (userEmail === ele.creator) {
+                var btn1 = document.createElement("button");
+                btn1.innerText = "EDIT"
+
+                btn1.addEventListener("click", () => {
+
+                    updatedForm.style.display = "flex"
+                    updatedTitle.value = ele.title;
+                    updatedDescription.value = ele.description;
+
+                })
+
+                updateBtn.addEventListener("click", () => {
+                    const updatedQuiz = {
+                        title: updatedTitle.value,
+                        description: updatedDescription.value
+                    }
+                    fetch(`${baseURL}/edit/${ele._id}`, {
+                        method: 'PATCH',
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(updatedQuiz)
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            alert(data.message)
+                            updatedForm.style.display = "none"
+                            displayQuizes()
+                        })
+                        .catch(err => {
+                            console.log(err)
+                        })
+                })
+
+                var btn2 = document.createElement("button");
+                btn2.innerText = "DELETE"
+
+                btn2.addEventListener("click", () => {
+                    fetch(`${baseURL}/delete/${ele._id}`, {
+                        method: "DELETE"
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            alert(data.message)
+                            displayQuizes()
+                        })
+                        .catch(err => {
+                            console.log(err)
+                        })
+                })
+            }
+            else {
+                var btn1 = document.createElement("button");
+                btn1.innerText = "Take Quiz"
+
+                var btn2 = document.createElement("button");
+                btn2.innerText = "Leaderboard"
+            }
+            card.append(title, description, createdBy, noOfQuestions, btn1, btn2)
+            quizesCont.append(card)
+        })
+    }
+
+    function showForm() {
+        if (quizForm.style.display === "flex") quizForm.style.display = "none";
+        else quizForm.style.display = "flex"
+    }
+
+    showQuestions.addEventListener("click", () => {
+        let length = noOfQuestions.value;
+        if (length === null) return alert("Enter no of questions to display");
+        let storeQuestions = []
+        for (let i = 1; i <= length; i++) {
+            storeQuestions.push(`
+            <div class="ques-form-cont-${i} qfc" >
+            <input type="text" id="questionTitle-${i}" placeholder="Title" required>
+            <textarea id="answerOptions-${i}" cols="10" rows="5" placeholder="every option in new line" required></textarea>
+            <textarea id="correctOptions-${i}" cols="10" rows="5" placeholder="every correct option in new line" required></textarea>
+            </div>
+            `)
+        }
+
+        questionCont.innerHTML = storeQuestions.join("")
+    })
+
+    quizForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        let length = noOfQuestions.value;
+        quizInfo = {
+            creator: quizForm.email.value,
+            title: quizForm.title.value,
+            description: quizForm.description.value,
+            questions: []
+        }
+
+        for (let i = 1; i <= length; i++) {
+            const question = {
+                title: document.getElementById('questionTitle-' + i).value,
+                answerOptions: document.getElementById('answerOptions-' + i).value.split('\n'),
+                correctOptions: document.getElementById('correctOptions-' + i).value.split('\n')
+            };
+            quizInfo.questions.push(question);
+        }
+
+        submitBtn.value = "Loading..."
+        fetch(`${baseURL}/createquiz`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(quizInfo)
+        })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                quizForm.style.display = "none";
+                displayQuizes()
+            })
+            .catch(error => {
+                console.error('Failed to create quiz', error);
+            })
+            .finally(() => {
+                submitBtn.value = "Create Quiz"
+            })
+    });
+
+
+</script>
+</html>

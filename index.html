@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home page</title>
+</head>
+<body>
+    <form id="registerForm">
+        <input type="email" placeholder="example@gmail.com" id="email">
+        <input type="password" placeholder="Password" id="password">
+        <input type="submit" value="Submit" id="register">
+    </form>
+</body>
+<script>
+    const baseURL = "http://localhost:1000"
+
+    const regForm = document.getElementById("registerForm");
+
+    regForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const userDetails = {
+            email: regForm.email.value,
+            password: regForm.password.value
+        }
+
+
+        fetch(`${baseURL}/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(userDetails)
+        }).then(r => r.json())
+            .then(res => {
+                if (res.message !== "Invalid password") {
+                    alert(res.message)
+                    localStorage.setItem("email", (userDetails.email))
+                    window.location.href = "./dashboard.html"
+                }
+                else alert(res.message)
+            })
+            .catch(error => console.log(error))
+    })
+</script>
+</html>
